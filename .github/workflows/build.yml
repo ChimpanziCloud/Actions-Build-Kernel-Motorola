@@ -14,10 +14,6 @@ on:
         description: 'Motorola Kernel Source'
         required: true
         default: 'https://github.com/MotorolaMobilityLLC/kernel-mtk.git'
-      MANIFEST_BRANCH:
-        description: 'Android Manifest Branch'
-        required: true
-        default: 'common-android14-6.1-2024-03'
       KERNEL_BRANCH:
         description: 'Kernel Branch'
         required: true
@@ -57,7 +53,7 @@ jobs:
     - name: Sync Kernel Source
       run: |
          rm ~/manifest-source/common
-         git clone ${{ inputs.KERNEL_SOURCE}} -b ${{ inputs.KERNEL_BRANCH}} ~/manifest-source/common
+         git clone ${{ inputs.KERNEL_SOURCE}} -b common-android14-6.1-2024-03 ~/manifest-source/common
 
     - name: Add KernelSU-Next
       if: ${{ inputs.KERNEL_TYPE == 'KernelSU-Next + SUSFS' }}
