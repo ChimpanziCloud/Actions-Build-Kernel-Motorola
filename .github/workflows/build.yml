@@ -14,6 +14,10 @@ on:
         description: 'Motorola Kernel Source'
         required: true
         default: 'https://github.com/MotorolaMobilityLLC/kernel-mtk.git'
+      MANIFEST_BRANCH:
+        description: 'Android Manifest Branch'
+        required: true
+        default: 'common-android14-6.1-2024-03'
       KERNEL_BRANCH:
         description: 'Kernel Branch'
         required: true
@@ -42,14 +46,23 @@ jobs:
       run: |
         sudo apt update && sudo apt install git-core gnupg flex bison build-essential zip curl zlib1g-dev libc6-dev-i386 x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig repo
 
+    - name: Sync Manifest
+      run: |
+         git config --global user.name "John Doe"
+         git config --global user.email "johndoe@gmail.com"
+         mkdir -p ~/manifest-source && cd ~/manifest-source
+         repo init --depth=1 -u https://android.googlesource.com/kernel/manifest -b ${{ inputs.MANIFEST_BRANCH}}
+         repo --trace sync -c -j$(nproc --all) --no-tags --fail-fast
+
     - name: Sync Kernel Source
       run: |
-         git clone ${{ inputs.KERNEL_SOURCE}} -b ${{ inputs.KERNEL_BRANCH}} ~/kernel_sync
+         rm ~/manifest-source/common
+         git clone ${{ inputs.KERNEL_SOURCE}} -b ${{ inputs.KERNEL_BRANCH}} ~/manifest-source/common
 
     - name: Add KernelSU-Next
       if: ${{ inputs.KERNEL_TYPE == 'KernelSU-Next + SUSFS' }}
       run: |
-         cd ~/kernel_sync
+         cd ~/manifest-source/common
          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -
 
     - name: Add SUSFS
@@ -57,17 +70,17 @@ jobs:
       run: |
          cd ~
          git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-android14-6.1 ~/susfs4ksu
-         cp ~/susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ~/kernel_sync/KernelSU-Next/
-         cp ~/susfs4ksu/kernel_patches/50_add_susfs_in_gki-android14-6.1.patch ~/kernel_sync/
-         cp ~/susfs4ksu/kernel_patches/fs/* ~/kernel_sync/fs
-         cp ~/susfs4ksu/kernel_patches/include/linux/* ~/kernel_sync/include/linux
-         cd ~/kernel_sync/KernelSU-Next && patch -p1 < 10_enable_susfs_for_ksu.patch
-         cd ~/kernel_sync/KernelSU-Next && patch -p1 < 50_add_susfs_in_gki-android14-6.1.patch
+         cp ~/susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ~/manifest-source/common/KernelSU-Next/
+         cp ~/susfs4ksu/kernel_patches/50_add_susfs_in_gki-android14-6.1.patch ~/manifest-source/common
+         cp ~/susfs4ksu/kernel_patches/fs/* ~/manifest-source/common/fs
+         cp ~/susfs4ksu/kernel_patches/include/linux/* ~/manifest-source/common/include/linux
+         cd ~/manifest-source/common/KernelSU-Next && patch -p1 < 10_enable_susfs_for_ksu.patch
+         cd ~/manifest-source/common/KernelSU-Next && patch -p1 < 50_add_susfs_in_gki-android14-6.1.patch
 
     - name: Configure KernelSU and SUSFS Flags
       if: ${{ inputs.KERNEL_TYPE == 'KernelSU-Next + SUSFS' }}
       run: |
-         cd ~/kernel_sync
+         cd ~/manifest-source/common
          # Append flags to the GKI defconfig
          cat <<EOF >> arch/arm64/configs/gki_defconfig
          CONFIG_KSU=y
@@ -81,15 +94,15 @@ jobs:
          EOF
          
          # Remove ABI protected exports to prevent Wi-Fi breakage on Android 14
-         rm -f android/abi_gki_protected_exports_*
+         rm android/abi_gki_protected_exports_*
          
     - name: Build Kernel
       run: |
-         cd ~/kernel_sync
+         cd ~/manifest-source
          tools/bazel build --config=fast --lto=thin //common:kernel_aarch64_dist
 
     - name: Upload Kernel
       uses: actions/upload-artifact@v4
       with:
           name: Out-Directory
-          path: ~/kernel_sync/out/kernel_aarch64/* # or path/to/artifact
+          path: ~/manifest-source/out/kernel_aarch64/* # or path/to/artifact
