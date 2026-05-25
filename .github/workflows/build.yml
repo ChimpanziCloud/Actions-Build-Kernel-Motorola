@@ -48,7 +48,17 @@ jobs:
          git config --global user.email "johndoe@gmail.com"
          mkdir -p ~/manifest-source && cd ~/manifest-source
          repo init -u https://android.googlesource.com/kernel/manifest -b common-android14-6.1-2024-03
-         repo --trace sync -c -j$(nproc --all) --fail-fast -g default,-platform:kernel/common
+         
+         # Inject a local manifest to drop Google's kernel/common tracking
+         mkdir -p .repo/local_manifests
+         cat <<EOF > .repo/local_manifests/remove_common.xml
+         <?xml version="1.0" encoding="UTF-8"?>
+         <manifest>
+           <remove-project name="kernel/common" />
+         </manifest>
+         EOF
+         
+         repo --trace sync -c -j$(nproc --all) --fail-fast
 
     - name: Sync Kernel Source
       run: |
