@@ -111,4 +111,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
           name: Out-Directory
-          path: ~/manifest-source/out/kernel_aarch64/* # or path/to/artifact
+          path: ~/manifest-source/bazel-bin/common/kernel_aarch64_dist/* # or path/to/artifact
