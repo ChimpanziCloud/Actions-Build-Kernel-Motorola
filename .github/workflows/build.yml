@@ -14,6 +14,10 @@ on:
         description: 'Motorola Kernel Source'
         required: true
         default: 'https://github.com/MotorolaMobilityLLC/kernel-mtk.git'
+      MANIFEST_BRANCH:
+        description: 'Android Manifest Branch'
+        required: true
+        default: 'common-android14-6.1-2024-03'
       KERNEL_BRANCH:
         description: 'Kernel Branch'
         required: true
@@ -47,7 +51,7 @@ jobs:
          git config --global user.name "John Doe"
          git config --global user.email "johndoe@gmail.com"
          mkdir -p ~/manifest-source && cd ~/manifest-source
-         repo init -u https://android.googlesource.com/kernel/manifest -b common-android14-6.1-2024-03
+         repo init -u https://android.googlesource.com/kernel/manifest -b ${{ inputs.MANIFEST_BRANCH}}
          
          # Inject a local manifest to drop Google's kernel/common tracking
          mkdir -p .repo/local_manifests
@@ -112,4 +116,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
           name: Out-Directory
-          path: ~/manifest-source/bazel-bin/common/kernel_aarch64/* # or path/to/artifact
+          path: |
+            ~/manifest-source/bazel-bin/common/kernel_aarch64/Image
+            ~/manifest-source/bazel-bin/common/kernel_aarch64/Image.gz
+            ~/manifest-source/bazel-bin/common/kernel_aarch64/Image.lz4
